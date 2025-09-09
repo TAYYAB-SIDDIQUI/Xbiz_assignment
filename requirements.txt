@@ -1,0 +1,6 @@
+flask
+paddleocr
+easyocr
+opencv-python
+numpy
+matplotlib
