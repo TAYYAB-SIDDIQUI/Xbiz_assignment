@@ -4,7 +4,7 @@ import requests
 url = 'http://127.0.0.1:5000/ocr-api'
 
 # Path to the image file you want to send for OCR
-image_path = 'docs/image.png'
+image_path = 'docs/pancard.png'
 
 # Open the image file in binary mode
 with open(image_path, 'rb') as img:
