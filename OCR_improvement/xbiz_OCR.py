@@ -61,7 +61,7 @@ def OCR_processed(path):
 
     return text_pr, text, easy_ocr_texts_pr, easy_ocr_texts
 
-@app.route("/ocr", methods=['POST'])
+@app.route("/ocr", methods=['POST','GET'])
 def ocr():
     if 'image' not in request.files:
         return jsonify({"error": "No image file provided"}), 400

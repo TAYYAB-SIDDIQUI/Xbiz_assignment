@@ -1,16 +1,37 @@
 import os
 import cv2
+import base64
 from paddleocr import PaddleOCR
 from flask import Flask,request,render_template,jsonify
 import json
 from rapidfuzz import fuzz, process
 
-app=Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp','PNG'}
 
-json_file = 'data.json'
-if not os.path.isfile(json_file):
-    with open(json_file, 'w') as f:
+# Create uploads directory if not exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app=Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+json_detected_file = 'detected/data.json'
+if not os.path.isfile(json_detected_file):
+    with open(json_detected_file, 'w') as f:
         json.dump([], f)
+
+json_undetected_file='undetected/data.json'
+if not os.path.isfile(json_undetected_file):
+    with open(json_undetected_file, 'w') as f:
+        json.dump([], f)
+
+def binarytobase64(filepath):
+    with open(filepath, "rb") as img_file:
+        encoded_string = base64.b64encode(img_file.read()).decode('utf-8')
+    return encoded_string
 
 
 def text_extraction(path):
@@ -22,21 +43,21 @@ def text_extraction(path):
     bg = cv2.medianBlur(gray, 31)
     norm = cv2.divide(gray, bg, scale=255)
     cv2.imwrite("processed_images/image.png",norm)
-    ocr= PaddleOCR(use_angle_cls=True,lang="en")
-    ocr_hindi=PaddleOCR(use_angle_cls=True,lang="hi")
+    ocr= PaddleOCR(use_angle_cls=True,lang="en",rec_batch_num=16)
+    ocr_hindi=PaddleOCR(use_angle_cls=True,lang="hi",rec_batch_num=16)
     text=ocr.ocr("processed_images/image.png")
     text_hindi=ocr_hindi.ocr("processed_images/image.png")
     list_text=text+text_hindi
     return list_text
 
-def match_keywords_from_big_string(big_text, keywords, threshold=70):
+def match_keywords_from_big_string(big_text, keywords, threshold=65):
     chunks = big_text
     matches = 0
     for chunk in chunks:
-        match, score, _ = process.extractOne(chunk, keywords, scorer=fuzz.token_sort_ratio)
+        match, score, _ = process.extractOne(chunk.lower(), keywords, scorer=fuzz.token_sort_ratio)
+        print(chunk,score,_)
         if score >= threshold:
             matches += 1
-            print(matches)
     return matches
 def detect_document_type(text_blocks):
     print(text_blocks)
@@ -58,6 +79,7 @@ def detect_document_type(text_blocks):
     "YOB", "Year of Birth",
     "Gender", "Male", "Female", "Transgender",
     "लिंग", "पुरुष", "महिला", "ट्रांसजेंडर"]
+    aadhaar_front_keywords = [s.lower() for s in aadhaar_front_keywords]
     aadhaar_back_keywords = [
     "Address",
     "पता",
@@ -74,6 +96,7 @@ def detect_document_type(text_blocks):
     "आधार",  # "Aadhaar" in Hindi
     "भारतीय विशिष्ट पहचान प्राधिकरण",  # UIDAI in Hindi
     "Unique ID"]
+    aadhaar_back_keywords= [s.lower() for s in aadhaar_back_keywords]
     pan_front_keywords = [
     "Permanent Account Number",
     "PAN",
@@ -88,7 +111,9 @@ def detect_document_type(text_blocks):
     "कारधारक का नाम",  # Name of cardholder (Hindi)
     "पिता का नाम",     # Father's name (Hindi)
     "जन्म तिथि",       # Date of Birth (Hindi)
-    "हस्ताक्षर"]     # Signature (Hindi)
+    "हस्ताक्षर"
+    ]     # Signature (Hindi)
+    pan_front_keywords=[s.lower() for s in pan_front_keywords]
     pan_back_keywords = [
     "Income Tax Department",
     "Government of India",
@@ -108,7 +133,7 @@ def detect_document_type(text_blocks):
     "कार्यालय का पता",  # Office address
     "पता",              # Address
     "स्थायी खाता संख्या"]  # Permanent Account Number (Hindi)
-
+    pan_back_keywords= [s.lower() for s in pan_back_keywords]
     dl_front_keywords = [
     "Driving Licence",
     "DL No", "DL Number", "License Number", "Licence No", "Driving Licence Number",
@@ -127,6 +152,7 @@ def detect_document_type(text_blocks):
     "QR Code",
     # Hindi equivalents (optional)
     "नाम", "पिता का नाम", "जन्म तिथि", "लिंग", "हस्ताक्षर", "पता"]
+    dl_front_keywords= [s.lower() for s in dl_front_keywords]
     dl_back_keywords = [
     "Class of Vehicle", "Vehicle Class", "Vehicle Category", "Type of Vehicle",
     "Transport", "Non-Transport",
@@ -143,7 +169,7 @@ def detect_document_type(text_blocks):
     "Signature of Issuing Authority",
     # Hindi (optional)
     "वाहन वर्ग", "लाइसेंस की वैधता", "रक्त समूह", "नियम और शर्तें"]
-
+    dl_back_keywords= [s.lower() for s in dl_back_keywords]
     voter_front_keywords = [
     "Election Commission of India",
     "Electors Photo Identity Card",
@@ -159,6 +185,7 @@ def detect_document_type(text_blocks):
     "पिता का नाम", "पति का नाम",  # Father's/Husband's Name
     "लिंग",  # Gender
     "जन्म तिथि", "आयु"]
+    voter_front_keywords= [s.lower() for s in voter_front_keywords]
     voter_back_keywords = [
     "Address",
     "House Number", "Street", "District", "State", "Pin Code", "Pincode",
@@ -176,7 +203,7 @@ def detect_document_type(text_blocks):
     "भाग संख्या",  # Part number
     "विधानसभा क्षेत्र",  # Assembly Constituency
     "निर्देश"  ]
-
+    voter_back_keywords= [s.lower() for s in voter_back_keywords]
     bank_header_keywords = [
     "Bank Statement",
     "Account Holder",
@@ -189,6 +216,7 @@ def detect_document_type(text_blocks):
     "Bank Name", "State Bank of India", "HDFC Bank", "ICICI Bank",  # Common names
     "Email", "Phone Number", "Mobile",
     "Address"]
+    bank_header_keywords= [s.lower() for s in bank_header_keywords]
     bank_transaction_keywords = [
     "Date", "Txn Date", "Transaction Date",
     "Description", "Narration", "Details", "Particulars",
@@ -197,17 +225,19 @@ def detect_document_type(text_blocks):
     "Balance", "Closing Balance", "Running Balance",
     "Ref No", "Cheque No", "Transaction ID",
     "Transfer", "NEFT", "RTGS", "IMPS", "UPI", "ATM", "Salary", "POS", "ACH", "NACH"]
-
+    bank_transaction_keywords= [s.lower() for s in bank_transaction_keywords]
     scores = {
     "aadhaar": match_keywords_from_big_string(text, aadhaar_front_keywords+aadhaar_back_keywords),
     "pan": match_keywords_from_big_string(text, pan_front_keywords+pan_back_keywords),
     "voter": match_keywords_from_big_string(text, voter_front_keywords+voter_back_keywords),
     "dl": match_keywords_from_big_string(text, dl_front_keywords+dl_back_keywords),
     "bank": match_keywords_from_big_string(text, bank_header_keywords+bank_transaction_keywords),
-}
+    }
     print(scores)
-    print("maximum",next((k for k, v in scores.items() if v == max(scores.values())), None))
-    return next((k for k, v in scores.items() if v == max(scores.values())), None)
+    max_val = max(scores.values(), default=0)
+    doc_type = "other" if max_val < 2 else next((k for k, v in scores.items() if v == max_val), "other")
+    print(doc_type)
+    return doc_type
 
 import re
 # import difflib
@@ -257,6 +287,10 @@ def detect_document_sides(text_blocks,document_type):
         has_back_keywords = any(kw in text.lower() for kw in [
             'transaction', 'debit', 'credit', 'balance', 'neft', 'rtgs', 'upi', 'imps', 'description'
         ])
+    elif document_type=="other":
+        keywords=[]
+        
+
 
     #doc_type = detect_document_type(text)
 
@@ -279,7 +313,8 @@ def detect_document_sides(text_blocks,document_type):
     else:
         return {
             "front": [],
-            "back": []
+            "back": [],
+            "document detected as other":text_blocks
         }
 
 
@@ -336,7 +371,7 @@ def extract_pan_fields(ocr_blocks):
         'is_valid_pan': False
     }
 
-    for block in ocr_blocks:
+    for i,block in enumerate(ocr_blocks):
         text = block.strip()
         
         # PAN Number: e.g., ABCDE1234F
@@ -361,13 +396,14 @@ def extract_pan_fields(ocr_blocks):
 def extract_voter_fields(ocr_blocks):
     fields = {
         'voter_id': None,
+        'father name':None,
         'name': None,
         'gender': None,
         'dob': None,
         'is_valid_voter': False
     }
 
-    for block in ocr_blocks:
+    for i,block in enumerate(ocr_blocks):
         text = block.strip()
 
         voter_match = re.search(r'[A-Z]{3}[0-9]{7}', text)
@@ -381,8 +417,17 @@ def extract_voter_fields(ocr_blocks):
 
         if re.search(r'\d{2}/\d{2}/\d{4}', text):
             fields['dob'] = re.search(r'\d{2}/\d{2}/\d{4}', text).group()
+        matches=process.extractOne("name",ocr_blocks)
+        if matches[1]>=80:
+            name=matches[0]
+        else:
+            name=text
+                
 
         if "name" in text.lower():
+            fields['name'] = name
+
+        if "father's name" in text.lower():
             fields['name'] = text
 
     fields['is_valid_voter'] = fields['voter_id'] is not None
@@ -453,11 +498,7 @@ def extract_bank_fields(ocr_blocks):
     fields['is_valid_statement'] = fields['account_number'] is not None or len(fields['transactions']) > 0
     return fields
 
-documents=os.listdir("docs")
-print(documents)
-
 def data(path):
-
     text_input=text_extraction(path)
     document_type=detect_document_type(text_input[0]["rec_texts"])
     print(text_input[0]["rec_boxes"],len(text_input[0]["rec_boxes"][0]))
@@ -466,62 +507,161 @@ def data(path):
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         aadhaar_front_data=extract_adhaar_text(document_sides["front"])
         #aadhaar_back_data=extract_adhaar_text(document_sides["back"])
-        response={"document_type":document_type,"aadhaar_data":{"front":aadhaar_front_data,"back":document_sides["back"]}}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":aadhaar_front_data,"back":document_sides["back"]}
     elif document_type=="pan":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         pan_front_data=extract_pan_fields(document_sides["front"])
         pan_back_data=extract_pan_fields(document_sides["back"])
-        response={"document_type":document_type,"front":pan_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":pan_front_data,"back":document_sides["back"]}
     elif document_type=="dl":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         dl_front_data=extract_dl_fields(document_sides["front"])
         #dl_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"front":dl_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":dl_front_data,"back":document_sides["back"]}
     elif document_type=="voter":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         voter_front_data=extract_voter_fields(document_sides["front"])
         #voter_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"front":voter_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":voter_front_data,"back":document_sides["back"]}
     elif document_type=="bank":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         bank_front_data=extract_bank_fields(document_sides["front"])
         #bank_back_data=extract_bank_fields(document_sides["back"])
-        response={"document_type":document_type,"front":bank_front_data,"back":document_sides["back"]}
-    else:
-        response={"document_type":"other","data":text_input[0]["rec_texts"]}
-    with open(json_file, 'r') as f:
-        data = json.load(f)
-    data.append(response)
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":bank_front_data,"back":document_sides["back"]}
+    elif document_type=="other":
+        response={"document_type":document_type,"base64":binarytobase64(path),"document_data":text_input[0]["rec_texts"]}
+        try:
+            with open(json_undetected_file, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    data = json.loads(content)
+                else:
+                    data = []
+        except json.JSONDecodeError as e:
+            print("Failed to decode JSON:", str(e))
+        data = []
 
-    # Save updated list back to file
-    with open(json_file, 'w') as f:
-        json.dump(data, f, indent=2)
-    return response
+        data.append(response)
+
+        # Save updated list back to file
+        with open(json_undetected_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        return response
+
+    else:
+        response={"document_type":"other","base64":binarytobase64(path),"data":text_input[0]["rec_texts"]}
+        try:
+            with open(json_undetected_file, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    data = json.loads(content)
+                else:
+                    data = []
+        except json.JSONDecodeError as e:
+            print("Failed to decode JSON:", str(e))
+        data = []
+
+        data.append(response)
+
+        # Save updated list back to file
+        with open(json_undetected_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        return response
+    if document_type!="other":
+        try:
+            with open(json_detected_file, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    data = json.loads(content)
+                else:
+                    data = []
+        except json.JSONDecodeError as e:
+            print("Failed to decode JSON:", str(e))
+        data = []
+
+        data.append(response)
+
+        # Save updated list back to file
+        with open(json_detected_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        return response
 
 # for i in os.listdir("docs"):
 #     print(data(f"docs/{i}"))
 
 @app.route("/",methods=["GET"])
 def index():
-    return jsonify({"api":"https://127.0.0.1:5000/ocr-api"})
+    return render_template("index.html")
 
-@app.route("/ocr-api",methods=["GET","POST"])
+@app.route("/ocr",methods=["GET","POST"])
 def ocrapi():
-    if request.method=="POST":
-        if 'image' not in request.files:
-            return jsonify({"error": "No image part in the request"}), 400
+    if request.method == "POST":
+        if 'images' not in request.files:
+            return jsonify({"error": "No images part in the request"}), 400
 
-        file = request.files['image']
+        files = request.files.getlist("images")
 
-        if file.filename == '':
-            return jsonify({"error": "No selected file"}), 400
-        file_path = os.path.join('uploads', file.filename)
-        file.save(file_path)
+        if not files:
+            return jsonify({"error": "No selected files"}), 400
 
-        ocr_data = data(file_path)
+        all_results_html = ""
+        for file in files:
+            if file and allowed_file(file.filename):
+                file_path = os.path.join('uploads', file.filename)
+                file.save(file_path)
 
-        return jsonify({"ocr_data": ocr_data})
-    return jsonify({"message":"This is the OCR API. Please send a POST request with an image."})
+                ocr_data = data(file_path)
+                html_str = "<div style='font-family: Arial; line-height: 1.6;'>"
+                doc_type = ocr_data.get("document_type", "Unknown")
+                html_str += f"<h2>🧾 Document Type: {doc_type.upper()}</h2><hr>"
 
+                def format_dict_section(title, section_dict):
+                    section_html = f"<h3>{title}</h3><div style='margin-left: 15px;'>"
+                    if isinstance(section_dict, dict):
+                        for key, value in section_dict.items():
+                            key_fmt = key.replace('_', ' ').capitalize()
+                            if key_fmt=="Raw blocks":
+                                continue
+                            if isinstance(value, list):
+                                section_html += f"<strong>{key_fmt}:</strong><br>"
+                                for item in value:
+                                    section_html += f"&nbsp;&nbsp;- {item}<br>"
+                            elif isinstance(value, dict):
+                                for i in value:
+                                    section_html += f"<label>{i}:</label> <span>{value[i]}</span><br>"
+                            else:
+                                section_html += f"<strong>{key_fmt}:</strong> {value}<br>"
+                    elif isinstance(section_dict, list):
+                        for item in section_dict:
+                            section_html += f"{item}<br>"
+                    section_html += "</div><br>"
+                    return section_html
+
+                for key, value in ocr_data.items():
+                    if key == "document_type":
+                        continue
+                    elif key == "front":
+                        html_str += format_dict_section("📄 FRONT SIDE", value)
+                    elif key == "back":
+                        html_str += format_dict_section("📄 BACK SIDE", value)
+                    else:
+                        html_str += format_dict_section(key.capitalize(), value)
+
+                html_str += "</div><hr><br>"
+                # Wrap each card
+                card_html = f"""
+                <div class="card mb-4 shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Processed File: {file.filename}</h5>
+                        <img src='data:image/jpeg;base64,{binarytobase64(f"static/docs/{file.filename}")}' class="img-fluid mb-3" alt="{file.filename}">
+                        {html_str}
+                    </div>
+                </div>
+                """
+                all_results_html += card_html
+
+        return render_template("data.html", data=all_results_html)
+    else:
+        return jsonify({"error": "Method is GET"})
 if __name__=="__main__":
     app.run(debug=True,host="0.0.0.0",port=5000)
