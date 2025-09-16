@@ -55,7 +55,6 @@ def match_keywords_from_big_string(big_text, keywords, threshold=65):
     matches = 0
     for chunk in chunks:
         match, score, _ = process.extractOne(chunk.lower(), keywords, scorer=fuzz.token_sort_ratio)
-        print(chunk,score,_)
         if score >= threshold:
             matches += 1
     return matches
@@ -136,15 +135,12 @@ def detect_document_type(text_blocks):
     dl_front_keywords = [
     "Driving Licence",
     "DL No", "DL Number", "License Number", "Licence No", "Driving Licence Number",
-    "Name", "Holder's Name", "Card Holder Name",
-    "Father's Name", "F/O", "S/O", "D/O", "W/O",  # Relations
-    "Date of Birth", "DOB", "D.O.B.",
-    "Gender", "Male", "Female", "Others",
+    "Holder's Name", "Card Holder Name",
     "Address", "Permanent Address",
     "Valid Till", "Valid Upto", "Validity",
     "Valid From", "Issue Date", "Date of Issue",
     "Issuing Authority", "Transport Department",
-    "Government of India", "Govt. of India",
+    "Government of India",
     "Signature",
     "Photograph", "Photo",
     "Card Type",
@@ -652,7 +648,7 @@ def ocrapi():
                 <div class="card mb-4 shadow">
                     <div class="card-body">
                         <h5 class="card-title">Processed File: {file.filename}</h5>
-                        <img src='data:image/jpeg;base64,{binarytobase64(f"static/docs/{file.filename}")}' class="img-fluid mb-3" alt="{file.filename}">
+                        <img src='data:image/jpeg;base64,{binarytobase64(f"uploads/{file.filename}")}' class="img-fluid mb-3" alt="{file.filename}">
                         {html_str}
                     </div>
                 </div>
@@ -720,7 +716,6 @@ def allocr():
         """
         all_results_html += card_html
     return render_template("data.html",data=all_results_html)
-
 
 if __name__=="__main__":
     app.run(debug=True,host="0.0.0.0",port=5000)
