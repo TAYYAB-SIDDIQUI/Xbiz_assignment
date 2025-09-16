@@ -1,4 +1,0 @@
-Flask
-pillow
-paddleocr
-paddlepaddle
