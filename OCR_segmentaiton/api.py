@@ -44,10 +44,10 @@ def text_extraction(path):
     norm = cv2.divide(gray, bg, scale=255)
     cv2.imwrite("processed_images/image.png",norm)
     ocr= PaddleOCR(use_angle_cls=True,lang="en",rec_batch_num=16)
-    ocr_hindi=PaddleOCR(use_angle_cls=True,lang="hi",rec_batch_num=16)
+    #ocr_hindi=PaddleOCR(use_angle_cls=True,lang="hi",rec_batch_num=16)
     text=ocr.ocr("processed_images/image.png")
-    text_hindi=ocr_hindi.ocr("processed_images/image.png")
-    list_text=text+text_hindi
+    #text_hindi=ocr_hindi.ocr("processed_images/image.png")
+    list_text=text
     return list_text
 
 def match_keywords_from_big_string(big_text, keywords, threshold=65):
@@ -60,7 +60,6 @@ def match_keywords_from_big_string(big_text, keywords, threshold=65):
             matches += 1
     return matches
 def detect_document_type(text_blocks):
-    print(text_blocks)
     text = text_blocks
     document_type=""
     print(text)
