@@ -663,5 +663,65 @@ def ocrapi():
         return render_template("data.html", data=all_results_html)
     else:
         return jsonify({"error": "Method is GET"})
+@app.route("/allocr", methods=["GET","POST"])
+def allocr():
+
+    folder="static/docs/"
+    file_names=os.listdir("static/docs")
+    all_results_html=""
+    for i in file_names:
+        file_path=folder+i
+        ocr_data=data(file_path)
+        html_str = "<div style='font-family: Arial; line-height: 1.6;'>"
+        doc_type = ocr_data.get("document_type", "Unknown")
+        html_str += f"<h2>🧾 Document Type: {doc_type.upper()}</h2><hr>"
+
+        def format_dict_section(title, section_dict):
+            section_html = f"<h3>{title}</h3><div style='margin-left: 15px;'>"
+            if isinstance(section_dict, dict):
+                for key, value in section_dict.items():
+                    key_fmt = key.replace('_', ' ').capitalize()
+                    if key_fmt=="Raw blocks":
+                        continue
+                    if isinstance(value, list):
+                        section_html += f"<strong>{key_fmt}:</strong><br>"
+                        for item in value:
+                            section_html += f"&nbsp;&nbsp;- {item}<br>"
+                    elif isinstance(value, dict):
+                        for i in value:
+                            section_html += f"<label>{i}:</label> <span>{value[i]}</span><br>"
+                    else:
+                        section_html += f"<strong>{key_fmt}:</strong> {value}<br>"
+            elif isinstance(section_dict, list):
+                for item in section_dict:
+                    section_html += f"{item}<br>"
+            section_html += "</div><br>"
+            return section_html
+
+        for key, value in ocr_data.items():
+            if key == "document_type":
+                continue
+            elif key == "front":
+                html_str += format_dict_section("📄 FRONT SIDE", value)
+            elif key == "back":
+                html_str += format_dict_section("📄 BACK SIDE", value)
+            else:
+                html_str += format_dict_section(key.capitalize(), value)
+
+        html_str += "</div><hr><br>"
+        # Wrap each card
+        card_html = f"""
+        <div class="card mb-4 shadow">
+            <div class="card-body">
+                <h5 class="card-title">Processed File: {i}</h5>
+                <img src='data:image/jpeg;base64,{binarytobase64(f"static/docs/{i}")}' class="img-fluid mb-3" alt="{i}">
+                {html_str}
+            </div>
+        </div>
+        """
+        all_results_html += card_html
+    return render_template("data.html",data=all_results_html)
+
+
 if __name__=="__main__":
     app.run(debug=True,host="0.0.0.0",port=5000)
