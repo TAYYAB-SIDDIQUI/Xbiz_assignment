@@ -33,6 +33,13 @@ def binarytobase64(filepath):
         encoded_string = base64.b64encode(img_file.read()).decode('utf-8')
     return encoded_string
 
+def textcorrector(text_blocks,mathcing_text):
+    for i,val in enumerate(text_blocks):
+        mathces=process.extract(val,mathcing_text,scorer=fuzz.token_set_ratio)
+        for word,score,index in mathces:
+            if score>=60:
+                text_blocks[i]=word
+    return text_blocks
 
 def text_extraction(path):
     img = cv2.imread(path)
@@ -41,8 +48,23 @@ def text_extraction(path):
     denoised = cv2.fastNlMeansDenoisingColored(sharp, None, 6, 10, 9, 21)
     gray = cv2.cvtColor(denoised, cv2.COLOR_BGR2GRAY)
     bg = cv2.medianBlur(gray, 31)
-    norm = cv2.divide(gray, bg, scale=255)
-    cv2.imwrite("processed_images/image.png",norm)
+    #norm = cv2.divide(gray, bg, scale=255)
+    thresh = cv2.adaptiveThreshold(bg, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11, 2)
+   # thresh = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2))
+    # morph = cv2.morphologyEx(norm, cv2.MORPH_CLOSE, kernel)
+    # coords = cv2.findNonZero(thresh)
+    # angle = cv2.minAreaRect(coords)[-1]
+    # if angle < -45:
+    #     angle = -(90 + angle)
+    # else:
+    #     angle = -angle
+    # (h, w) = thresh.shape[:2]
+    # M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
+    # deskewed = cv2.warpAffine(thresh, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    # resized = cv2.resize(deskewed, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+
+    cv2.imwrite("processed_images/image.png",thresh)
     ocr= PaddleOCR(use_angle_cls=True,lang="en",rec_batch_num=16)
     #ocr_hindi=PaddleOCR(use_angle_cls=True,lang="hi",rec_batch_num=16)
     text=ocr.ocr("processed_images/image.png")
@@ -50,12 +72,11 @@ def text_extraction(path):
     list_text=text
     return list_text
 
-def match_keywords_from_big_string(big_text, keywords, threshold=65):
+def match_keywords_from_big_string(big_text, keywords, threshold=60):
     chunks = big_text
     matches = 0
     for chunk in chunks:
         match, score, _ = process.extractOne(chunk.lower(), keywords, scorer=fuzz.token_sort_ratio)
-        print(chunk,score,_)
         if score >= threshold:
             matches += 1
     return matches
@@ -136,11 +157,10 @@ def detect_document_type(text_blocks):
     dl_front_keywords = [
     "Driving Licence",
     "DL No", "DL Number", "License Number", "Licence No", "Driving Licence Number",
-    "Name", "Holder's Name", "Card Holder Name",
-    "Father's Name", "F/O", "S/O", "D/O", "W/O",  # Relations
+    "Holder's Name", "Card Holder Name",
     "Date of Birth", "DOB", "D.O.B.",
-    "Gender", "Male", "Female", "Others",
-    "Address", "Permanent Address",
+    "Gender",
+    "Permanent Address",
     "Valid Till", "Valid Upto", "Validity",
     "Valid From", "Issue Date", "Date of Issue",
     "Issuing Authority", "Transport Department",
@@ -148,7 +168,6 @@ def detect_document_type(text_blocks):
     "Signature",
     "Photograph", "Photo",
     "Card Type",
-    "QR Code",
     # Hindi equivalents (optional)
     "नाम", "पिता का नाम", "जन्म तिथि", "लिंग", "हस्ताक्षर", "पता"]
     dl_front_keywords= [s.lower() for s in dl_front_keywords]
@@ -219,8 +238,8 @@ def detect_document_type(text_blocks):
     bank_transaction_keywords = [
     "Date", "Txn Date", "Transaction Date",
     "Description", "Narration", "Details", "Particulars",
-    "Debit", "Withdrawal", "Dr",
-    "Credit", "Deposit", "Cr",
+    "Debit", "Withdrawal",
+    "Credit", "Deposit", 
     "Balance", "Closing Balance", "Running Balance",
     "Ref No", "Cheque No", "Transaction ID",
     "Transfer", "NEFT", "RTGS", "IMPS", "UPI", "ATM", "Salary", "POS", "ACH", "NACH"]
@@ -241,6 +260,15 @@ def detect_document_type(text_blocks):
 import re
 # import difflib
 def detect_document_sides(text_blocks,document_type):
+    matching_adhar=['name', 'dob', 'gender', 'male', 'female', 'uidai', 'aadhaar', 'aadhaar number', 'year of birth']
+    matching_pan= ['income tax department', 'permanent account number', 'pan', 'father\'s name',
+            'date of birth', 'govt. of india', 'signature']
+    matching_vote=['election commission', 'voter id', 'epic', 'elector', 'father\'s name','mother\'s name', 'gender', 'dob', 'identity card']
+    mathcing_dl=['driving licence', 'license number', 'dl no', 'rto', 'name', 'dob',
+            'issue date', 'valid till', 'transport', 'non-transport']
+    mathcing_bank=['account number', 'ifsc', 'branch', 'account holder', 'bank name', 'statement period']
+    matching_list=matching_adhar+matching_pan+matching_vote+mathcing_dl+mathcing_bank
+    print(textcorrector(text_blocks,matching_list))
     text = ' '.join(text_blocks).lower()
     if document_type=="aadhaar":
         has_front_keywords = any(kw in text.lower() for kw in [
@@ -252,6 +280,7 @@ def detect_document_sides(text_blocks,document_type):
             'address', 'care of', 'c/o', 's/o', 'd/o', 'w/o', 'pin code', 'pincode', 'mobile', 'enrollment number', 'qr code'
         ])
     elif document_type=="pan":
+        
         has_front_keywords = any(kw in text.lower() for kw in [
             'income tax department', 'permanent account number', 'pan', 'father\'s name',
             'date of birth', 'govt. of india', 'signature'
@@ -290,9 +319,7 @@ def detect_document_sides(text_blocks,document_type):
         keywords=[]
         
 
-
     #doc_type = detect_document_type(text)
-
     # Smart classification
     if has_front_keywords and has_back_keywords:
         return {
@@ -335,10 +362,12 @@ def extract_adhaar_text(text_blocks):
             fields['issuer'] = 'UIDAI'
 
         # Detect gender
-        if 'male' in block_lower:
-            fields['gender'] = 'MALE'
-        elif 'female' in block_lower:
-            fields['gender'] = 'FEMALE'
+        match_gender=process.extract(block_lower,["male","female"],scorer=fuzz.token_set_ratio)
+        for word, score, _ in match_gender:
+            if score >= 90:
+                fields["gender"] = word.upper()
+                print("matched", word, "with score", score)
+                break
 
         # Detect date of birth
         dob_match = re.search(r'\d{2}[/-]\d{2}[/-]\d{4}', block)
@@ -372,9 +401,10 @@ def extract_pan_fields(ocr_blocks):
 
     for i,block in enumerate(ocr_blocks):
         text = block.strip()
-        
         # PAN Number: e.g., ABCDE1234F
-        pan_match = re.search(r'[A-Z]{5}\d{4}[A-Z]', text)
+        clean_text = re.sub(r'[^A-Z0-9]', '', text)
+        clean_text=clean_text.upper()
+        pan_match = re.search(r'[A-Z]{5}\d{4}[A-Z]', clean_text)
         if pan_match:
             fields['pan_number'] = pan_match.group()
 
@@ -384,10 +414,12 @@ def extract_pan_fields(ocr_blocks):
             fields['dob'] = dob_match.group()
 
         # Fuzzy matching for Father and Name
-        if "father" in text.lower():
-            fields['father_name'] = text
-        elif "name" in text.lower() and not fields['name']:
-            fields['name'] = text
+        match_fathername=process.extract(block,["Father's","Fathers name","Father's name"],scorer=fuzz.token_set_ratio)
+        for word, score, _ in match_fathername:
+            if score >= 80:
+                fields["father_name"] = word
+                print("matched", word, "with score", score)
+                break
 
     fields['is_valid_pan'] = fields['pan_number'] is not None
     return fields
@@ -471,11 +503,14 @@ def extract_bank_fields(ocr_blocks):
         'is_valid_statement': False
     }
 
-    for block in ocr_blocks:
+    for i,block in enumerate(ocr_blocks):
         text = block.strip()
 
         # Account number pattern
-        acc_match = re.search(r'X{2,}\d{3,5}', text)
+        if "account number" in block.lower():
+            match=ocr_blocks[i]
+            pass
+        acc_match = re.search(r'\d{9,18}', text)
         if acc_match:
             fields['account_number'] = acc_match.group()
 
@@ -538,7 +573,6 @@ def data(path):
                     data = []
         except json.JSONDecodeError as e:
             print("Failed to decode JSON:", str(e))
-        data = []
 
         data.append(response)
 
@@ -558,7 +592,6 @@ def data(path):
                     data = []
         except json.JSONDecodeError as e:
             print("Failed to decode JSON:", str(e))
-        data = []
 
         data.append(response)
 
@@ -576,7 +609,6 @@ def data(path):
                     data = []
         except json.JSONDecodeError as e:
             print("Failed to decode JSON:", str(e))
-        data = []
 
         data.append(response)
 
