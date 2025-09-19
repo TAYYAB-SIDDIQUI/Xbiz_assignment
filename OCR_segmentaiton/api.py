@@ -48,8 +48,8 @@ def text_extraction(path):
     denoised = cv2.fastNlMeansDenoisingColored(sharp, None, 6, 10, 9, 21)
     gray = cv2.cvtColor(denoised, cv2.COLOR_BGR2GRAY)
     bg = cv2.medianBlur(gray, 31)
-    #norm = cv2.divide(gray, bg, scale=255)
-    thresh = cv2.adaptiveThreshold(bg, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11, 2)
+    norm = cv2.divide(gray, bg, scale=255)
+    #thresh = cv2.adaptiveThreshold(norm, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11, 2)
    # thresh = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
     # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2))
     # morph = cv2.morphologyEx(norm, cv2.MORPH_CLOSE, kernel)
@@ -64,7 +64,7 @@ def text_extraction(path):
     # deskewed = cv2.warpAffine(thresh, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
     # resized = cv2.resize(deskewed, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 
-    cv2.imwrite("processed_images/image.png",thresh)
+    cv2.imwrite("processed_images/image.png",norm)
     ocr= PaddleOCR(use_angle_cls=True,lang="en",rec_batch_num=16)
     #ocr_hindi=PaddleOCR(use_angle_cls=True,lang="hi",rec_batch_num=16)
     text=ocr.ocr("processed_images/image.png")
