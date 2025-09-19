@@ -56,7 +56,7 @@ def makeimg(json_path, input_image):
     draw = ImageDraw.Draw(img_pil)
 
     # Load font (adjust to available Devanagari font on your system)
-    font = ImageFont.truetype("Nirmala.ttf", 7)  
+    font = ImageFont.truetype("Nirmala.ttf", 7)
 
     for (x, y, word_text) in word_positions:
         draw.text((x, y - 7), word_text, font=font, fill=(255, 0, 0))
