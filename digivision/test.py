@@ -1,56 +1,5 @@
 def extract_data(json_path):
-    if type(json_path) != str:
-        print("Json Path is not string")
-        return None
-    import json
-    # Load your OCR JSON file
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    extracted_data = []
-
-    # Safely get pages
-    pages = []
-    if "results" in data and len(data["results"]) > 0:
-        result0 = data["results"][0]
-        if "Data" in result0 and len(result0["Data"]) > 0:
-            data0 = result0["Data"]
-            if "responses" in data0 and len(data0["responses"]) > 0:
-                response0 = data0["responses"][0]
-                if "fullTextAnnotation" in response0:
-                    pages = response0["fullTextAnnotation"].get("pages", [])
-
-    # Loop through pages and extract bounding boxes, confidence, and text
-    for page in pages:
-        for block in page.get("blocks", []):
-            for paragraph in block.get("paragraphs", []):
-                for word in paragraph.get("words", []):
-                    word_text = "".join([s.get("text", "") for s in word.get("symbols", [])])
-                    word_confidence = word.get("confidence", None)
-                    word_bbox = word.get("boundingBox", {}).get("vertices", [])
-
-                    symbols_info = []
-                    for s in word.get("symbols", []):
-                        symbols_info.append({
-                            "text": s.get("text", ""),
-                            "confidence": s.get("confidence", None),
-                            "bounding_box": s.get("boundingBox", {}).get("vertices", [])
-                        })
-
-                    extracted_data.append({
-                        "word_text": word_text,
-                        "confidence": word_confidence,
-                        "bounding_box": word_bbox,
-                        "symbols": symbols_info
-                    })
-
-    # Print results
-    output=[]
-    for item in extracted_data:
-        output.append(json.dumps(item, ensure_ascii=False, indent=2))
-    with open("output.json", "w", encoding="utf-8") as out_file:
-        json.dump(extracted_data, out_file, ensure_ascii=False, indent=2)
-
+ 
     import json
 
     # Load OCR JSON

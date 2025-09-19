@@ -68,3 +68,4 @@ def makeimg(json_path, input_image):
     cv2.imwrite(OUTPUT_IMAGE, img)
     print("✅ Image created with boxes + labels:", OUTPUT_IMAGE)
 
+makeimg("Raw_response/pan_response.json",r"E:\Xbiz_assignment\OCR_segmentaiton\static\docs\image.png")
