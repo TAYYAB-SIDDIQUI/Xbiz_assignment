@@ -56,10 +56,10 @@ def makeimg(json_path, input_image):
     draw = ImageDraw.Draw(img_pil)
 
     # Load font (adjust to available Devanagari font on your system)
-    font = ImageFont.truetype("Nirmala.ttf", 24)  
+    font = ImageFont.truetype("Nirmala.ttf", 7)  
 
     for (x, y, word_text) in word_positions:
-        draw.text((x, y - 25), word_text, font=font, fill=(255, 0, 0))
+        draw.text((x, y - 7), word_text, font=font, fill=(255, 0, 0))
 
     # Convert back to OpenCV
     img = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
