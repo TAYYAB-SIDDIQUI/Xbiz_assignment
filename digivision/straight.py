@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 def compute_text_angle_for_best_word(img_path, draw_result=True):
     img = cv2.imread(img_path)
+    
     if img is None:
         raise FileNotFoundError(f"Can't open {img_path}")
     h_img, w_img = img.shape[:2]
@@ -43,9 +44,8 @@ def compute_text_angle_for_best_word(img_path, draw_result=True):
     width = min(w_img - left, data['width'][best_idx] + 2*pad)
     height = min(h_img - top, data['height'][best_idx] + 2*pad)
     crop = img[top:top+height, left:left+width].copy()
-
+    gray=cv2.cvtColor(crop,cv2.COLOR_RGB2GRAY)
     # Preprocess crop to get text mask (foreground white, background black)
-    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     # Make mask so text is white (non-zero)
     # If background is white (most pixels white), invert so text is white
@@ -151,15 +151,15 @@ def compute_text_angle_for_best_word(img_path, draw_result=True):
 
     # draw a small marker at chosen y in the crop center
     cv2.circle(out, (left + width//2, top + chosen_y_in_crop), 4, (0,255,255), -1)
-
+    cv2.imwrite("annotated_out.png",out)
     # Report angle between the horizontal and fitted line
-    angle_between = angle_deg  # already absolute angle from horizontal in degrees
+    angle_between = angle_deg+1  # already absolute angle from horizontal in degrees
     print(f"Used method: {used_method}")
     print(f"Angle between horizontal and text line: {angle_between:.2f}°")
     
 
     # Example usage:
-    img = cv2.imread(r"E:\Xbiz_assignment\OCR_segmentaiton\static\docs\dhapubal.png")
+    # img = cv2.imread(img_path)
     # rotated = rotate_image_auto(img, angle_between)  # rotate image by -15 degrees
     # plt.imshow(rotated)
     # plt.show()
@@ -173,19 +173,20 @@ def compute_text_angle_for_best_word(img_path, draw_result=True):
     #     cv2.imwrite(save_out)
 
     return angle_between
-def rotate_image_auto(img, angle):
+def rotate_image_auto(image_path, angle):
         """
         Rotate image automatically based on the detected tilt angle.
         If angle > 0, rotates clockwise to deskew.
         If angle < 0, rotates counter-clockwise to deskew.
         """
-        img=cv2.imread(img)
+        print(image_path)
+        img=cv2.imread(image_path)
         (h, w) = img.shape[:2]
         center = (w // 2, h // 2)
 
         # Always rotate opposite to detected angle
         final_angle = -angle
-
+        print(final_angle)
         M = cv2.getRotationMatrix2D(center, final_angle, 1.0)
         rotated = cv2.warpAffine(img, M, (w, h),
                                 flags=cv2.INTER_CUBIC,
@@ -195,7 +196,7 @@ def rotate_image_auto(img, angle):
         return output_path
 # if __name__ == "__main__":
 #     img_path = r"E:\Xbiz_assignment\OCR_segmentaiton\static\docs\dhapubal.png"# change to your file
-#     angle = compute_text_angle_for_best_word(img_path, draw_result=False,)
+#     angle = compute_text_angle_for_best_word(img_path, draw_result=False)
 #     rotate_image_auto(img_path,angle)
 #     print("Saved annotated image to annotated_out.png")
 #     print("Angle (degrees):", angle)
