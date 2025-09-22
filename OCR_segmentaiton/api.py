@@ -5,6 +5,7 @@ from paddleocr import PaddleOCR
 from flask import Flask,request,render_template,jsonify
 import json
 from rapidfuzz import fuzz, process
+import straight
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp','PNG'}
@@ -50,7 +51,7 @@ def text_extraction(path):
     bg = cv2.medianBlur(gray, 31)
     norm = cv2.divide(gray, bg, scale=255)
     #thresh = cv2.adaptiveThreshold(norm, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11, 2)
-   # thresh = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    #thresh = cv2.threshold(bg, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
     # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2))
     # morph = cv2.morphologyEx(norm, cv2.MORPH_CLOSE, kernel)
     # coords = cv2.findNonZero(thresh)
@@ -72,7 +73,7 @@ def text_extraction(path):
     list_text=text
     return list_text
 
-def match_keywords_from_big_string(big_text, keywords, threshold=60):
+def match_keywords_from_big_string(big_text, keywords, threshold=70):
     chunks = big_text
     matches = 0
     for chunk in chunks:
@@ -373,7 +374,6 @@ def extract_adhaar_text(text_blocks):
         dob_match = re.search(r'\d{2}[/-]\d{2}[/-]\d{4}', block)
         if dob_match:
             fields['dob'] = dob_match.group()
-
         # Detect Aadhaar number
         aadhaar_match = re.search(r'\d{4}\s\d{4}\s\d{4}', block)
         if aadhaar_match:
@@ -417,9 +417,14 @@ def extract_pan_fields(ocr_blocks):
         match_fathername=process.extract(block,["Father's","Fathers name","Father's name"],scorer=fuzz.token_set_ratio)
         for word, score, _ in match_fathername:
             if score >= 80:
-                fields["father_name"] = word
+                fields["father_name"] = ocr_blocks[i+1]
                 print("matched", word, "with score", score)
-                break
+        
+        match_name=process.extract(block,["Name","names","name of"],scorer=fuzz.token_set_ratio)
+        for word, score, _ in match_name:
+            if score >= 80:
+                fields["name"] = ocr_blocks[i+1]
+                print("matched", word, "with score", score)
 
     fields['is_valid_pan'] = fields['pan_number'] is not None
     return fields
@@ -533,9 +538,10 @@ def extract_bank_fields(ocr_blocks):
     return fields
 
 def data(path):
-    text_input=text_extraction(path)
+    angle=straight.compute_text_angle_for_best_word_easyocr(path,draw_result=False)
+    img_path=straight.rotate_image_auto(path,angle)
+    text_input=text_extraction(img_path)
     document_type=detect_document_type(text_input[0]["rec_texts"])
-    print(text_input[0]["rec_boxes"],len(text_input[0]["rec_boxes"][0]))
     print(document_type)
     if document_type=="aadhaar":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)

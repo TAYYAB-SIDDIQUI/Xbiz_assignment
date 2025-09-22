@@ -1,14 +1,14 @@
 import requests
 import os
 
-files=os.listdir('docs')
+files=os.listdir('static/docs')
 
 for i in files:
 # URL of the Flask API
     url = 'http://127.0.0.1:5000/ocr-api'
 
     # Path to the image file you want to send for OCR
-    image_path = f'docs/{i}'
+    image_path = f'static/docs/{i}'
 
     # Open the image file in binary mode
     with open(image_path, 'rb') as img:

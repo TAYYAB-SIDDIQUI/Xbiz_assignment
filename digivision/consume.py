@@ -21,7 +21,7 @@ def api_consume(img_path):
         "source": "OCR_RAW",
         "documentName": "14.JPG",
         "caseNo": "case001",
-        "documentBlob": f"{base64text}"  # put base64 file content here if required
+        "documentBlob": f"{base64text}" # put base64 file content here if required
     }
 
     # Send POST request
