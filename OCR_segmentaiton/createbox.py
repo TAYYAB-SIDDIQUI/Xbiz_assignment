@@ -22,8 +22,8 @@ def draw_easyocr_boxes(image_path, output_path="easyocr_output.png"):
 
         # Put the text label above the top-left corner
         x, y = pts[0]
-        cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(img, text, (x, y - 2), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.2, (0, 0, 255), 1, cv2.LINE_AA)
 
     # Save annotated image
     cv2.imwrite(output_path, img)
