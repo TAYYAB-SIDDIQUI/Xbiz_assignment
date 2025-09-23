@@ -1,0 +1,11 @@
+As discussed with Pushkar Sir, PFB the proposed 8-week training plan for the two groups of interns, along with trainer allocations.
+Training Plan:
+    Group 2 (Python Interns)
+    Week 1: Intro to AI/ML concepts (Supervised/Unsupervised learning) in Python/.NET
+    Week 2: Data preprocessing, coding standards, OCR hands-on in Python/.NET
+    Week 3: Advanced preprocessing, postprocessing and OCR with image modification in Python/.NET
+    Week 4: Mini-project: ML Models (Signature Detection, Face Detection, Object Detection)
+    Week 5: React Basics – components, props, state, simple UI project
+    Week 6: Java Basics – syntax, OOP concepts, simple programs
+    Week 7: .NET Basics (C#) – OOP, simple APIs, console applications
+    Week 8: Integration Task – React frontend + Python backend

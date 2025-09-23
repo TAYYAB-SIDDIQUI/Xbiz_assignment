@@ -6,6 +6,8 @@ from flask import Flask,request,render_template,jsonify
 import json
 from rapidfuzz import fuzz, process
 import straight
+import createbox
+
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp','PNG'}
@@ -538,38 +540,41 @@ def extract_bank_fields(ocr_blocks):
     return fields
 
 def data(path):
-    angle=straight.compute_text_angle_for_best_word_easyocr(path,draw_result=False)
+    angle=straight.compute_text_angle_for_best_word(path,draw_result=False)
     img_path=straight.rotate_image_auto(path,angle)
     text_input=text_extraction(img_path)
+    text_boxes=text_input[0]["rec_boxes"].tolist()
+    print(text_boxes)
+    createbox.draw_easyocr_boxes(img_path,"output.jpg")
     document_type=detect_document_type(text_input[0]["rec_texts"])
     print(document_type)
     if document_type=="aadhaar":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         aadhaar_front_data=extract_adhaar_text(document_sides["front"])
         #aadhaar_back_data=extract_adhaar_text(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":aadhaar_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":aadhaar_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
     elif document_type=="pan":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         pan_front_data=extract_pan_fields(document_sides["front"])
         pan_back_data=extract_pan_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":pan_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":pan_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
     elif document_type=="dl":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         dl_front_data=extract_dl_fields(document_sides["front"])
         #dl_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":dl_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":dl_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
     elif document_type=="voter":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         voter_front_data=extract_voter_fields(document_sides["front"])
         #voter_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":voter_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":voter_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
     elif document_type=="bank":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         bank_front_data=extract_bank_fields(document_sides["front"])
         #bank_back_data=extract_bank_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":bank_front_data,"back":document_sides["back"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"front":bank_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
     elif document_type=="other":
-        response={"document_type":document_type,"base64":binarytobase64(path),"document_data":text_input[0]["rec_texts"]}
+        response={"document_type":document_type,"base64":binarytobase64(path),"document_data":text_input[0]["rec_texts"],"boundingbox":text_boxes}
         try:
             with open(json_undetected_file, 'r') as f:
                 content = f.read().strip()
@@ -584,11 +589,11 @@ def data(path):
 
         # Save updated list back to file
         with open(json_undetected_file, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2,ensure_ascii=False)
         return response
 
     else:
-        response={"document_type":"other","base64":binarytobase64(path),"data":text_input[0]["rec_texts"]}
+        response={"document_type":"other","base64":binarytobase64(path),"data":text_input[0]["rec_texts"],"boundingbox":text_boxes}
         try:
             with open(json_undetected_file, 'r') as f:
                 content = f.read().strip()
@@ -603,7 +608,7 @@ def data(path):
 
         # Save updated list back to file
         with open(json_undetected_file, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, ensure_ascii=False)
         return response
     if document_type!="other":
         try:
@@ -620,7 +625,7 @@ def data(path):
 
         # Save updated list back to file
         with open(json_detected_file, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2,ensure_ascii=False)
         return response
 
 # for i in os.listdir("docs"):
