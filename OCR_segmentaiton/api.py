@@ -540,11 +540,18 @@ def extract_bank_fields(ocr_blocks):
     return fields
 
 def data(path):
+    id=0
+    t_id=f"T{id}"
+    id+=1
     angle=straight.compute_text_angle_for_best_word(path,draw_result=False)
     img_path=straight.rotate_image_auto(path,angle)
     text_input=text_extraction(img_path)
     text_boxes=text_input[0]["rec_boxes"].tolist()
     print(text_boxes)
+    if angle and img_path and text_input and text_boxes:
+        remark="Success"
+    else:
+        remark="failed"
     createbox.draw_easyocr_boxes(img_path,"output.jpg")
     document_type=detect_document_type(text_input[0]["rec_texts"])
     print(document_type)
@@ -552,29 +559,29 @@ def data(path):
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         aadhaar_front_data=extract_adhaar_text(document_sides["front"])
         #aadhaar_back_data=extract_adhaar_text(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":aadhaar_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
+        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":aadhaar_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="pan":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         pan_front_data=extract_pan_fields(document_sides["front"])
         pan_back_data=extract_pan_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":pan_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
+        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":pan_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="dl":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         dl_front_data=extract_dl_fields(document_sides["front"])
         #dl_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":dl_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
+        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":dl_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="voter":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         voter_front_data=extract_voter_fields(document_sides["front"])
         #voter_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":voter_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
+        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":voter_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="bank":
         document_sides=detect_document_sides(text_input[0]["rec_texts"],document_type)
         bank_front_data=extract_bank_fields(document_sides["front"])
         #bank_back_data=extract_bank_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"front":bank_front_data,"back":document_sides["back"],"boundingbox":text_boxes}
+        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":bank_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="other":
-        response={"document_type":document_type,"base64":binarytobase64(path),"document_data":text_input[0]["rec_texts"],"boundingbox":text_boxes}
+        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"raw_text":text_input[0]["rec_texts"],"boundingbox":text_boxes}]}
         try:
             with open(json_undetected_file, 'r') as f:
                 content = f.read().strip()
@@ -593,7 +600,7 @@ def data(path):
         return response
 
     else:
-        response={"document_type":"other","base64":binarytobase64(path),"data":text_input[0]["rec_texts"],"boundingbox":text_boxes}
+        response={"document_type":"other","base64":binarytobase64(path),"ocr_result":[{"raw":text_input[0]["rec_texts"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
         try:
             with open(json_undetected_file, 'r') as f:
                 content = f.read().strip()
