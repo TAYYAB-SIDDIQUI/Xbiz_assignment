@@ -1,0 +1,7 @@
+2025-09-22 17:56:02,431 - duplicateTxn_b48e64 - INFO - Processing request for transaction ID: duplicateTxn_b48e64
+2025-09-22 17:56:02,440 - duplicateTxn_b48e64 - INFO - Input request saved: OCR_DATA/duplicateTxn_b48e64\Assets\duplicateTxn_b48e64.jpg
+2025-09-22 17:56:02,440 - duplicateTxn_b48e64 - INFO - Processing with version: v4
+2025-09-22 17:56:02,440 - duplicateTxn_b48e64 - INFO - Processing with GPT-4 Vision extractor
+2025-09-22 17:56:02,459 - duplicateTxn_b48e64 - INFO - Output path: C:\Users\DELL\AppData\Local\Temp\tmp6ck5dixe.jpg_gpt4.xlsx
+2025-09-22 17:56:20,743 - duplicateTxn_b48e64 - INFO - Output file saved: OCR_DATA/duplicateTxn_b48e64\Output\duplicateTxn_b48e64_20250922_175620.xlsx
+2025-09-22 17:56:20,751 - duplicateTxn_b48e64 - INFO - Request processed successfully
