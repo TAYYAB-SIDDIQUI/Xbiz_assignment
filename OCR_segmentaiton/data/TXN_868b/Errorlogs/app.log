@@ -1,0 +1,6 @@
+2025-09-25 16:30:31,882 - INFO - Request ocr is running
+2025-09-25 16:30:31,924 - INFO - input0.json is created
+2025-09-25 16:30:31,954 - INFO - Assets Done
+2025-09-25 16:31:35,526 - INFO - Response0.json is created
+2025-09-25 16:31:35,529 - INFO - OCR_text Extracted (document is not detected)
+2025-09-25 16:31:35,544 - INFO - Extracted text is now sorted

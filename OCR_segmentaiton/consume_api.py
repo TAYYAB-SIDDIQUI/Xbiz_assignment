@@ -10,7 +10,8 @@ url = 'http://127.0.0.1:5000/api_ocr_tayyab'
 
 # Path to the image file you want to send for OCR
 image_path = r"static\docs\dhapubal.png"
-
+username = 'tayyab'
+password = 'tayyab123'
 # Open the image file in binary mode
 with open(image_path, 'rb') as img:
     # Prepare the files to be sent in the request
@@ -18,7 +19,7 @@ with open(image_path, 'rb') as img:
     headers = {"Content-Type": "application/json"}
 
     # Send a POST request to the API with the image
-    response = requests.post(url, json=payload,headers=headers)
+    response = requests.post(url, json=payload,headers=headers,auth=(username,password))
     
     # Check if the response is successful
     if response.status_code == 200:

@@ -1,0 +1,18 @@
+2025-09-25 11:57:34,050 - INFO - Request ocr is running
+2025-09-25 11:57:34,067 - INFO - input0.json is created
+2025-09-25 11:57:34,880 - INFO - Assets Done
+2025-09-25 11:57:34,880 - INFO - page_1.png extracted form pdf
+2025-09-25 11:59:07,767 - INFO - response genrated from page_1.png
+2025-09-25 11:59:07,767 - INFO - Response0.json is created
+2025-09-25 11:59:07,767 - INFO - OCR_text Extracted (document detected)
+2025-09-25 11:59:07,805 - INFO - Extracted text is now sorted
+2025-09-25 11:59:07,805 - INFO - page_2.png extracted form pdf
+2025-09-25 12:00:30,634 - INFO - response genrated from page_2.png
+2025-09-25 12:00:30,649 - INFO - Response0.json is created
+2025-09-25 12:00:30,649 - INFO - OCR_text Extracted (document detected)
+2025-09-25 12:00:30,685 - INFO - Extracted text is now sorted
+2025-09-25 12:00:30,686 - INFO - page_3.png extracted form pdf
+2025-09-25 12:01:49,295 - INFO - response genrated from page_3.png
+2025-09-25 12:01:49,295 - INFO - Response0.json is created
+2025-09-25 12:01:49,295 - INFO - OCR_text Extracted (document is not detected)
+2025-09-25 12:01:49,320 - INFO - Extracted text is now sorted

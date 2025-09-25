@@ -1,9 +1,9 @@
 import os
-import cv2
 import base64
-from paddleocr import PaddleOCR
 import numpy as np
 from flask import Flask,request,render_template,jsonify
+from flask_jwt_extended import JWTManager,create_access_token,jwt_required,get_jwt_identity
+from werkzeug.security import generate_password_hash,check_password_hash
 import json
 import uuid
 from rapidfuzz import fuzz, process
@@ -15,8 +15,9 @@ import helper.match as match
 import helper.doc_fields as doc_fields
 import helper.doc_sides as doc_sides
 import helper.sort_text as sort_text
+import helper.pdf_extracter as pdf_extracter
 import tempfile
-
+from functools import wraps
 
 
 UPLOAD_FOLDER = 'uploads'
@@ -26,7 +27,27 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp','PNG'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app=Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['JWT_SECRET_KEY']=os.environ.get("JWT_SECRET_KEY")
+jwt=JWTManager(app)
 
+with open("db/userinfo.json","r", encoding="utf-8") as f:
+    user=json.load(f)
+
+with open("db/enc_info.json","w",encoding="utf-8") as ef:
+    hashing={"user":user["user"],"password":generate_password_hash(user["password"])}
+    print(hashing)
+    json.dump(hashing,ef,indent=2,ensure_ascii=False)
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args,**kwargs):
+        auth=request.authorization
+        if not auth or not auth.username or not auth.password:
+            return jsonify({"msg":"Missing Username or Password"}),400
+        user_password=hashing.get("password")
+        if not user_password or not check_password_hash(user_password,auth.password):
+            return jsonify({"msg":"Bad username and password"}),401
+        return f(*args,**kwargs)
+    return decorated
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -54,10 +75,10 @@ def textcorrector(text_blocks,mathcing_text):
                 text_blocks[i]=word
     return text_blocks
 
-def data(path,output_img):
+def data(path,output_img="output.png"):
     txn_file_name=f"TXN_{str(uuid.uuid4())[:4]}"
     t_id=txn_file_name
-    angle=straight.compute_text_angle_for_best_word(path,draw_result=False)
+    angle=straight.compute_skew_projection(path)
     img_path=straight.rotate_image_auto(path,angle)
     text_input=text_extract.text_extraction(img_path)
     text_box=text_input[0]["rec_polys"]
@@ -73,29 +94,29 @@ def data(path,output_img):
         document_sides=doc_sides.detect_document_sides(text_input[0]["rec_texts"],document_type)
         aadhaar_front_data=doc_fields.extract_adhaar_text(document_sides["front"])
         #aadhaar_back_data=extract_adhaar_text(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":aadhaar_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
+        response={"document_type":document_type,"ocr_result":[{"front":aadhaar_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="pan":
         document_sides=doc_sides.detect_document_sides(text_input[0]["rec_texts"],document_type)
-        pan_front_data=doc_sides.extract_pan_fields(document_sides["front"])
+        pan_front_data=doc_fields.extract_pan_fields(document_sides["front"])
         #pan_back_data=extract_pan_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":pan_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
+        response={"document_type":document_type,"ocr_result":[{"front":pan_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="dl":
         document_sides=doc_sides.detect_document_sides(text_input[0]["rec_texts"],document_type)
-        dl_front_data=doc_sides.extract_dl_fields(document_sides["front"])
+        dl_front_data=doc_fields.extract_dl_fields(document_sides["front"])
         #dl_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":dl_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
+        response={"document_type":document_type,"ocr_result":[{"front":dl_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="voter":
         document_sides=doc_sides.detect_document_sides(text_input[0]["rec_texts"],document_type)
-        voter_front_data=doc_sides.extract_voter_fields(document_sides["front"])
+        voter_front_data=doc_fields.extract_voter_fields(document_sides["front"])
         #voter_back_data=extract_dl_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":voter_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
+        response={"document_type":document_type,"ocr_result":[{"front":voter_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="bank":
         document_sides=doc_sides.detect_document_sides(text_input[0]["rec_texts"],document_type)
-        bank_front_data=doc_sides.extract_bank_fields(document_sides["front"])
+        bank_front_data=doc_fields.extract_bank_fields(document_sides["front"])
         #bank_back_data=extract_bank_fields(document_sides["back"])
-        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"front":bank_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
+        response={"document_type":document_type,"ocr_result":[{"front":bank_front_data,"back":document_sides["back"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
     elif document_type=="other":
-        response={"document_type":document_type,"base64":binarytobase64(path),"ocr_result":[{"raw_text":text_input[0]["rec_texts"],"boundingbox":text_boxes}]}
+        response={"document_type":"other","ocr_result":[{"raw_text":text_input[0]["rec_texts"],"boundingbox":text_boxes}]}
         try:
             with open(json_undetected_file, 'r') as f:
                 content = f.read().strip()
@@ -114,7 +135,7 @@ def data(path,output_img):
         return response
 
     else:
-        response={"document_type":"other","base64":binarytobase64(path),"ocr_result":[{"raw":text_input[0]["rec_texts"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
+        response={"document_type":"other","ocr_result":[{"raw":text_input[0]["rec_texts"],"boundingbox":text_boxes}],"txn_id":t_id,"remark":remark}
         try:
             with open(json_undetected_file, 'r') as f:
                 content = f.read().strip()
@@ -285,6 +306,7 @@ def allocr():
         all_results_html += card_html
     return render_template("data.html",data=all_results_html)
 @app.route("/api_ocr_tayyab",methods=["GET","POST"])
+@require_auth
 def request_ocr():
     if request.method=="POST":
         txn_file_name=f"TXN_{str(uuid.uuid4())[:4]}"
@@ -300,26 +322,61 @@ def request_ocr():
             json.dump(request_data,f,indent=2)
             logs.info("input0.json is created")
         base_64_img=base64.b64decode(request_data["base64_image"])
-        with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as temp_file:
-            temp_file.write(base_64_img)
-            temp_file_path=temp_file.name
-        with open(f"data/{txn_file_name}/Assets/image_{txn_file_name}.png","wb") as f:
-            f.write(base_64_img)
+        filetype=pdf_extracter.detect_filetype(request_data["base64_image"])
+        print(filetype)
+        if filetype=="PDF":
+            final_response=[]
+            pdf_extracter.pdf_pages_to_images_base64(request_data["base64_image"],f"data/{txn_file_name}/Assets/images_from_pdf")
             logs.info("Assets Done")
-        response=data(temp_file_path,f"data/{txn_file_name}/Output/boxed_output.png")
-        with open(f"data/{txn_file_name}/Output/response0.json","w") as f:
-            json.dump(response,f,indent=2)
-            logs.info("Response0.json is created")
-        with open(f"data/{txn_file_name}/Output/OCR_text.txt","w") as f:
-            if response["document_type"]!="other":
-                f.write("\n".join(response["ocr_result"][0]["front"]["raw_blocks"]))
-                logs.info("OCR_text Extracted (document detected)")
+            os.makedirs(f"data/{txn_file_name}/Assets/images_from_pdf",exist_ok=True)
+            for i in os.listdir(f"data/{txn_file_name}/Assets/images_from_pdf"):
+                logs.info(f"{i} extracted form pdf")
+                response=data(f"data/{txn_file_name}/Assets/images_from_pdf/{i}",f"data/{txn_file_name}/Output/boxed_output.png")
+                logs.info(f"response genrated from {i}")
+                print("response is generated")
+                with open(f"data/{txn_file_name}/Output/{i}_response0.json","w") as f:
+                    json.dump(response,f,indent=2)
+                    logs.info("Response0.json is created")
+                with open(f"data/{txn_file_name}/Output/{i}_OCR_text.txt","w") as f:
+                    if response["document_type"]!="other":
+                        f.write("\n".join(response["ocr_result"][0]["front"]["raw_blocks"]))
+                        logs.info("OCR_text Extracted (document detected)")
+                    else:
+                        f.write("\n".join(response["ocr_result"][0]["raw_text"]))
+                        logs.info("OCR_text Extracted (document is not detected)")
+                if response["document_type"]!="other":
+                    sort_text.main(response['ocr_result'][0]['boundingbox'],response['ocr_result'][0]['front']['raw_blocks'],f"data/{txn_file_name}/Output/{i}_OCR_sort_text.txt")
+                else:
+                    sort_text.main(response['ocr_result'][0]['boundingbox'],response['ocr_result'][0]['raw_text'],f"data/{txn_file_name}/Output/{i}_OCR_sort_text.txt")
+                logs.info("Extracted text is now sorted")
+                response.update({"page":i})
+                final_response.append(response)
+            return jsonify({"response":final_response}) 
+        else:
+            pass
+            with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as temp_file:
+                temp_file.write(base_64_img)
+                temp_file_path=temp_file.name
+            with open(f"data/{txn_file_name}/Assets/image_{txn_file_name}.png","wb") as f:
+                f.write(base_64_img)
+                logs.info("Assets Done")
+            response=data(temp_file_path,f"data/{txn_file_name}/Output/boxed_output.png")
+            with open(f"data/{txn_file_name}/Output/response0.json","w") as f:
+                json.dump(response,f,indent=2)
+                logs.info("Response0.json is created")
+            with open(f"data/{txn_file_name}/Output/OCR_text.txt","w") as f:
+                if response["document_type"]!="other":
+                    f.write("\n".join(response["ocr_result"][0]["front"]["raw_blocks"]))
+                    logs.info("OCR_text Extracted (document detected)")
+                else:
+                    f.write("\n".join(response["ocr_result"][0]["raw_text"]))
+                    logs.info("OCR_text Extracted (document is not detected)")
+            if response['document_type']!="other":
+                sort_text.main(response['ocr_result'][0]['boundingbox'],response['ocr_result'][0]['front']['raw_blocks'],f"data/{txn_file_name}/Output/OCR_sort_text.txt")
             else:
-                f.write("\n".join(response["ocr_result"][0]["raw_text"]))
-                logs.info("OCR_text Extracted (document is not detected)")
-        sort_text.main(response['ocr_result'][0]['boundingbox'],response['ocr_result'][0]['front']['raw_blocks'],f"data/{txn_file_name}/Output/OCR_sort_text.txt")
-        logs.info("Extracted text is now sorted")
-        return jsonify(response)
+                sort_text.main(response['ocr_result'][0]['boundingbox'],response['ocr_result'][0]['raw_text'],f"data/{txn_file_name}/Output/OCR_sort_text.txt")
+            logs.info("Extracted text is now sorted")
+            return jsonify({"response":response})
 
 if __name__=="__main__":
     app.run(debug=True,host="0.0.0.0",port=5000)

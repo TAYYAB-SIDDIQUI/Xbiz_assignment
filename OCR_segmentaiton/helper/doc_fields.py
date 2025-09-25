@@ -51,6 +51,7 @@ def extract_pan_fields(ocr_blocks):
         'name': None,
         'father_name': None,
         'dob': None,
+        'raw_blocks': ocr_blocks,
         'is_valid_pan': False
     }
 
@@ -91,6 +92,7 @@ def extract_voter_fields(ocr_blocks):
         'name': None,
         'gender': None,
         'dob': None,
+        'raw_blocks': ocr_blocks,
         'is_valid_voter': False
     }
 
@@ -130,6 +132,7 @@ def extract_dl_fields(ocr_blocks):
         'name': None,
         'dob': None,
         'valid_till': None,
+        'raw_blocks': ocr_blocks,
         'is_valid_dl': False
     }
 
@@ -160,6 +163,7 @@ def extract_bank_fields(ocr_blocks):
         'ifsc_code': None,
         'transactions': [],
         'balance': None,
+        'raw_blocks': ocr_blocks,
         'is_valid_statement': False
     }
 
