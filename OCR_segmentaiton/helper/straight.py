@@ -261,6 +261,10 @@ def rotate_image_auto(image_path, angle):
     if abs(angle) < 0.5:  # tolerance
         print("Image already straight.")
         return image_path
+    if angle<0:
+        angle=angle
+    else:
+        angle=-angle
     print("final_angle :",-angle)
 
     M = cv2.getRotationMatrix2D(center, angle, 1.0)

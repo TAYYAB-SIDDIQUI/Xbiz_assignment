@@ -1,6 +1,7 @@
 import requests
 import os
 import base64
+import json
 
 files=os.listdir('static/docs')
 
@@ -10,8 +11,11 @@ url = 'http://127.0.0.1:5000/api_ocr_tayyab'
 
 # Path to the image file you want to send for OCR
 image_path = r"static\docs\dhapubal.png"
-username = 'tayyab'
-password = 'tayyab123'
+with open("db/userinfo.json","r",encoding="utf-8") as f:
+    userval=json.load(f)
+
+username = userval["user"]
+password = userval["password"]
 # Open the image file in binary mode
 with open(image_path, 'rb') as img:
     # Prepare the files to be sent in the request
