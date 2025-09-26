@@ -213,7 +213,7 @@ import cv2
 import numpy as np
 import math
 
-def compute_skew_projection(img_path, delta=0.5, limit=15):
+def compute_skew_projection(img_path, delta=0.5, limit=90):
     """
     Detect skew angle of text using projection profile analysis.
     delta = step size in degrees
@@ -260,12 +260,16 @@ def rotate_image_auto(image_path, angle):
 
     if abs(angle) < 0.5:  # tolerance
         print("Image already straight.")
+        print("final_angle :",-angle)
         return image_path
-    if angle<0:
-        angle=angle
+    if angle==-90:
+        angle = -angle
     else:
-        angle=-angle
-    print("final_angle :",-angle)
+        if angle<0:
+            angle=angle
+        else:
+            angle=-angle
+        
 
     M = cv2.getRotationMatrix2D(center, angle, 1.0)
     rotated = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_CUBIC,
